@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PavSim — моделирование динамических систем</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="toolbar">
+  <div class="brand">PavSim</div>
+  <div class="spacer"></div>
+  <div class="run-controls">
+    <label>t<sub>end</sub> <input id="t_end" type="number" value="1" step="0.1" min="0"></label>
+    <label>h <input id="h" type="number" value="0.01" step="0.001" min="0.0001"></label>
+    <label>method
+      <select id="method">
+        <option value="rk4">RK4</option>
+        <option value="euler">Euler</option>
+      </select>
+    </label>
+    <button id="run" class="primary">▶ Run</button>
+  </div>
+  <div class="io-controls">
+    <button id="experiment_settings" class="hidden">Настройки эксперимента</button>
+    <button id="back_to_parent" class="primary hidden" title="Return to parent diagram">← Back to parent</button>
+    <input id="model_name" type="text" placeholder="model name" value="my_model">
+    <button id="save">Save</button>
+    <select id="load_list"></select>
+    <button id="load">Load</button>
+    <button id="block_params" title="Настройки выбранного блока (F2)">Параметры</button>
+    <button id="clear" title="Clear the diagram">Clear</button>
+    <button id="edit_bends" title="Toggle add bend mode">Add Bend</button>
+    <button id="reset_route" title="Toggle reset route mode">Reset Route</button>
+  </div>
+</header>
+
+<main>
+  <aside id="library_panel">
+    <div class="library_header">
+      <span class="library_title">Block library</span>
+      <button id="library_refresh" title="Re-read the block files from disk">⟳ Refresh</button>
+    </div>
+    <div id="library_tree"></div>
+    <div class="library_hint">Click a block, then click the canvas to place it. Double-click a graph block to open its plot in a new window.</div>
+  </aside>
+  <section id="canvas_wrap">
+    <canvas id="canvas"></canvas>
+    <div id="port_tooltip" class="hidden"></div>
+    <div id="hint">Click a block in the library, then click here to place it. Drag blocks to move. Click an output port then an input port to connect. Double-click a block to edit parameters (graph blocks open their plot). Right-click (or Delete) to remove.</div>
+  </section>
+</main>
+
+<footer id="statusbar">Not run yet.</footer>
+
+<div id="dialog_overlay" class="hidden">
+  <div id="dialog">
+    <h3 id="dialog_title">Parameters</h3>
+    <div id="dialog_body"></div>
+    <div class="dialog_btns">
+      <button id="dialog_cancel">Cancel</button>
+      <button id="dialog_ok" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

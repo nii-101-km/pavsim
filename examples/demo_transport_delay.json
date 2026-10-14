@@ -1,0 +1,42 @@
+{
+  "blocks": [
+    {
+      "id": "time",
+      "type": "model_time",
+      "params": {},
+      "x": 80,
+      "y": 170
+    },
+    {
+      "id": "delay",
+      "type": "transport_delay",
+      "params": {
+        "tau": 0.005,
+        "initial_value": 0
+      },
+      "x": 330,
+      "y": 170
+    },
+    {
+      "id": "graph",
+      "type": "graph_display",
+      "params": {},
+      "x": 580,
+      "y": 170
+    }
+  ],
+  "connections": [
+    {
+      "from": "time",
+      "from_port": 0,
+      "to": "delay",
+      "to_port": 0
+    },
+    {
+      "from": "delay",
+      "from_port": 0,
+      "to": "graph",
+      "to_port": 0
+    }
+  ]
+}

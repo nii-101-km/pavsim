@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+# Local artifacts and credentials
+.cache/
+.local/
+.scratch/
+tmp/
+*.log
+*.pid
+.env
+.env.*
+!.env.example
+# User diagrams; compatibility fixtures live under tests/fixtures/
+models/
+# Editor files
+*.swp
+*~
+.DS_Store
+
+# Internal submission instructions
+/SUBMISSION.md

@@ -1,0 +1,212 @@
+{
+  "blocks": [
+    {
+      "id": "r",
+      "type": "constant",
+      "params": {
+        "value": 1
+      },
+      "x": 40,
+      "y": 180
+    },
+    {
+      "id": "error",
+      "type": "subtract",
+      "params": {},
+      "x": 200,
+      "y": 180
+    },
+    {
+      "id": "pi",
+      "type": "pi",
+      "params": {},
+      "x": 360,
+      "y": 180
+    },
+    {
+      "id": "plant",
+      "type": "first_order",
+      "params": {
+        "tau": 1,
+        "gain": 1
+      },
+      "x": 540,
+      "y": 180
+    },
+    {
+      "id": "graph",
+      "type": "graph_display",
+      "params": {},
+      "x": 540,
+      "y": 370
+    },
+    {
+      "id": "opt",
+      "type": "optimizer",
+      "x": 160,
+      "y": 30,
+      "params": {
+        "p1": 0.2,
+        "p2": 0.1,
+        "p3": 7,
+        "optimize_p3": false,
+        "max_evaluations": 60
+      }
+    },
+    {
+      "id": "goal",
+      "type": "objective",
+      "x": 200,
+      "y": 370,
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "from": "r",
+      "to": "error",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "plant",
+      "to": "error",
+      "from_port": 0,
+      "to_port": 1,
+      "route": [
+        {
+          "x": 685,
+          "y": 209
+        },
+        {
+          "x": 685,
+          "y": 320
+        },
+        {
+          "x": 180,
+          "y": 320
+        },
+        {
+          "x": 180,
+          "y": 231
+        }
+      ]
+    },
+    {
+      "from": "error",
+      "to": "pi",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "pi",
+      "to": "plant",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "plant",
+      "to": "graph",
+      "from_port": 0,
+      "to_port": 0,
+      "route": [
+        {
+          "x": 690,
+          "y": 209
+        },
+        {
+          "x": 690,
+          "y": 430
+        },
+        {
+          "x": 520,
+          "y": 430
+        },
+        {
+          "x": 520,
+          "y": 399
+        }
+      ]
+    },
+    {
+      "from": "opt",
+      "from_port": 0,
+      "to": "pi",
+      "to_port": 1,
+      "route": [
+        {
+          "x": 342,
+          "y": 59
+        },
+        {
+          "x": 342,
+          "y": 231
+        }
+      ]
+    },
+    {
+      "from": "opt",
+      "from_port": 1,
+      "to": "pi",
+      "to_port": 2,
+      "route": [
+        {
+          "x": 350,
+          "y": 81
+        },
+        {
+          "x": 350,
+          "y": 253
+        }
+      ]
+    },
+    {
+      "from": "plant",
+      "from_port": 0,
+      "to": "goal",
+      "to_port": 0,
+      "route": [
+        {
+          "x": 680,
+          "y": 209
+        },
+        {
+          "x": 680,
+          "y": 470
+        },
+        {
+          "x": 180,
+          "y": 470
+        },
+        {
+          "x": 180,
+          "y": 399
+        }
+      ]
+    },
+    {
+      "from": "goal",
+      "from_port": 0,
+      "to": "opt",
+      "to_port": 0,
+      "route": [
+        {
+          "x": 340,
+          "y": 399
+        },
+        {
+          "x": 340,
+          "y": 490
+        },
+        {
+          "x": 140,
+          "y": 490
+        },
+        {
+          "x": 140,
+          "y": 59
+        }
+      ]
+    }
+  ]
+}

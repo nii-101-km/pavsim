@@ -1,0 +1,106 @@
+{
+  "blocks": [
+    {
+      "id": "r",
+      "type": "constant",
+      "params": {
+        "value": 1
+      },
+      "x": 80,
+      "y": 180
+    },
+    {
+      "id": "error",
+      "type": "subtract",
+      "params": {},
+      "x": 270,
+      "y": 180
+    },
+    {
+      "id": "kp",
+      "type": "constant",
+      "params": {
+        "value": 0.2
+      },
+      "x": 280,
+      "y": 60
+    },
+    {
+      "id": "ki",
+      "type": "constant",
+      "params": {
+        "value": 0.1
+      },
+      "x": 280,
+      "y": 300
+    },
+    {
+      "id": "pi",
+      "type": "pi",
+      "params": {},
+      "x": 470,
+      "y": 180
+    },
+    {
+      "id": "plant",
+      "type": "first_order",
+      "params": {
+        "tau": 1,
+        "gain": 1
+      },
+      "x": 660,
+      "y": 180
+    },
+    {
+      "id": "graph",
+      "type": "graph_display",
+      "params": {},
+      "x": 660,
+      "y": 340
+    }
+  ],
+  "connections": [
+    {
+      "from": "r",
+      "to": "error",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "plant",
+      "to": "error",
+      "from_port": 0,
+      "to_port": 1
+    },
+    {
+      "from": "error",
+      "to": "pi",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "kp",
+      "to": "pi",
+      "from_port": 0,
+      "to_port": 1
+    },
+    {
+      "from": "ki",
+      "to": "pi",
+      "from_port": 0,
+      "to_port": 2
+    },
+    {
+      "from": "pi",
+      "to": "plant",
+      "from_port": 0,
+      "to_port": 0
+    },
+    {
+      "from": "plant",
+      "to": "graph",
+      "from_port": 0,
+      "to_port": 0
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "blocks": [
+    {"id": "c", "type": "constant", "x": 0, "y": 0, "params": {"value": 2.0}}
+  ],
+  "connections": []
+}

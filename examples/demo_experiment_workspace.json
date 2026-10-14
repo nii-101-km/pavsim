@@ -1,0 +1,303 @@
+{
+  "blocks": [
+    {
+      "id": "opt",
+      "type": "optimizer",
+      "x": 60,
+      "y": 80,
+      "params": {
+        "p1": 0.2,
+        "p2": 0.1,
+        "p3": 7,
+        "optimize_p3": false,
+        "max_evaluations": 40
+      }
+    },
+    {
+      "id": "exp",
+      "type": "experiment",
+      "params": {
+        "t_end": 10,
+        "h": 0.02,
+        "method": "rk4"
+      },
+      "internal": {
+        "blocks": [
+          {
+            "id": "r",
+            "type": "constant",
+            "params": {
+              "value": 1
+            },
+            "x": 40,
+            "y": 180
+          },
+          {
+            "id": "error",
+            "type": "subtract",
+            "params": {},
+            "x": 200,
+            "y": 180
+          },
+          {
+            "id": "pi",
+            "type": "pi",
+            "params": {},
+            "x": 360,
+            "y": 180
+          },
+          {
+            "id": "plant",
+            "type": "first_order",
+            "params": {
+              "tau": 1,
+              "gain": 1
+            },
+            "x": 540,
+            "y": 180
+          },
+          {
+            "id": "graph",
+            "type": "graph_display",
+            "params": {},
+            "x": 540,
+            "y": 370
+          },
+          {
+            "id": "goal",
+            "type": "objective",
+            "x": 200,
+            "y": 370,
+            "params": {}
+          },
+          {
+            "id": "P1",
+            "type": "experiment_input",
+            "params": {
+              "port": 0
+            },
+            "x": 40,
+            "y": 30
+          },
+          {
+            "id": "P2",
+            "type": "experiment_input",
+            "params": {
+              "port": 1
+            },
+            "x": 40,
+            "y": 110
+          },
+          {
+            "id": "P3",
+            "type": "experiment_input",
+            "params": {
+              "port": 2
+            },
+            "x": 40,
+            "y": 190
+          },
+          {
+            "id": "J",
+            "type": "experiment_result",
+            "params": {},
+            "x": 470,
+            "y": 420
+          }
+        ],
+        "connections": [
+          {
+            "from": "r",
+            "to": "error",
+            "from_port": 0,
+            "to_port": 0
+          },
+          {
+            "from": "plant",
+            "to": "error",
+            "from_port": 0,
+            "to_port": 1,
+            "route": [
+              {
+                "x": 685,
+                "y": 209
+              },
+              {
+                "x": 685,
+                "y": 320
+              },
+              {
+                "x": 180,
+                "y": 320
+              },
+              {
+                "x": 180,
+                "y": 231
+              }
+            ]
+          },
+          {
+            "from": "error",
+            "to": "pi",
+            "from_port": 0,
+            "to_port": 0
+          },
+          {
+            "from": "pi",
+            "to": "plant",
+            "from_port": 0,
+            "to_port": 0
+          },
+          {
+            "from": "plant",
+            "to": "graph",
+            "from_port": 0,
+            "to_port": 0,
+            "route": [
+              {
+                "x": 690,
+                "y": 209
+              },
+              {
+                "x": 690,
+                "y": 430
+              },
+              {
+                "x": 520,
+                "y": 430
+              },
+              {
+                "x": 520,
+                "y": 399
+              }
+            ]
+          },
+          {
+            "from": "P1",
+            "from_port": 0,
+            "to": "pi",
+            "to_port": 1
+          },
+          {
+            "from": "P2",
+            "from_port": 0,
+            "to": "pi",
+            "to_port": 2
+          },
+          {
+            "from": "plant",
+            "from_port": 0,
+            "to": "goal",
+            "to_port": 0,
+            "route": [
+              {
+                "x": 680,
+                "y": 209
+              },
+              {
+                "x": 680,
+                "y": 470
+              },
+              {
+                "x": 180,
+                "y": 470
+              },
+              {
+                "x": 180,
+                "y": 399
+              }
+            ]
+          },
+          {
+            "from": "goal",
+            "from_port": 0,
+            "to": "J",
+            "to_port": 0
+          }
+        ]
+      },
+      "x": 340,
+      "y": 80
+    },
+    {
+      "id": "route",
+      "type": "graph_xyz",
+      "params": {
+        "label": "\u041c\u0430\u0440\u0448\u0440\u0443\u0442 p1/p2, \u0446\u0432\u0435\u0442 J"
+      },
+      "x": 340,
+      "y": 300
+    },
+    {
+      "id": "series",
+      "type": "graph_series3",
+      "params": {
+        "label": "p1, p2 \u0438 J \u043f\u043e \u043f\u0440\u043e\u0431\u0430\u043c"
+      },
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "connections": [
+    {
+      "from": "opt",
+      "from_port": 0,
+      "to": "exp",
+      "to_port": 0
+    },
+    {
+      "from": "opt",
+      "from_port": 1,
+      "to": "exp",
+      "to_port": 1
+    },
+    {
+      "from": "opt",
+      "from_port": 2,
+      "to": "exp",
+      "to_port": 2
+    },
+    {
+      "from": "exp",
+      "from_port": 0,
+      "to": "opt",
+      "to_port": 0
+    },
+    {
+      "from": "opt",
+      "from_port": 0,
+      "to": "route",
+      "to_port": 0
+    },
+    {
+      "from": "opt",
+      "from_port": 1,
+      "to": "route",
+      "to_port": 1
+    },
+    {
+      "from": "exp",
+      "from_port": 0,
+      "to": "route",
+      "to_port": 2
+    },
+    {
+      "from": "opt",
+      "from_port": 0,
+      "to": "series",
+      "to_port": 0
+    },
+    {
+      "from": "opt",
+      "from_port": 1,
+      "to": "series",
+      "to_port": 1
+    },
+    {
+      "from": "exp",
+      "from_port": 0,
+      "to": "series",
+      "to_port": 2
+    }
+  ]
+}

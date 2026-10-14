@@ -1,0 +1,90 @@
+{
+  "blocks": [
+    {
+      "id": "e",
+      "type": "constant",
+      "params": {
+        "value": 1
+      },
+      "x": 80,
+      "y": 70
+    },
+    {
+      "id": "k1",
+      "type": "constant",
+      "params": {
+        "value": 2
+      },
+      "x": 80,
+      "y": 160
+    },
+    {
+      "id": "k2",
+      "type": "constant",
+      "params": {
+        "value": 1
+      },
+      "x": 80,
+      "y": 250
+    },
+    {
+      "id": "k3",
+      "type": "constant",
+      "params": {
+        "value": 0.2
+      },
+      "x": 80,
+      "y": 340
+    },
+    {
+      "id": "pid",
+      "type": "pid",
+      "params": {
+        "filter_tau": 0.2
+      },
+      "x": 330,
+      "y": 180
+    },
+    {
+      "id": "graph",
+      "type": "graph_display",
+      "params": {
+        "label": "PID output"
+      },
+      "x": 580,
+      "y": 180
+    }
+  ],
+  "connections": [
+    {
+      "from": "e",
+      "from_port": 0,
+      "to": "pid",
+      "to_port": 0
+    },
+    {
+      "from": "k1",
+      "from_port": 0,
+      "to": "pid",
+      "to_port": 1
+    },
+    {
+      "from": "k2",
+      "from_port": 0,
+      "to": "pid",
+      "to_port": 2
+    },
+    {
+      "from": "k3",
+      "from_port": 0,
+      "to": "pid",
+      "to_port": 3
+    },
+    {
+      "from": "pid",
+      "from_port": 0,
+      "to": "graph",
+      "to_port": 0
+    }
+  ]
+}

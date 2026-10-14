@@ -1,3 +1,4 @@
+const t=I18n.t;
 const canvas=document.getElementById('plot'),ctx=canvas.getContext('2d'),tip=document.getElementById('tip');
 let packet=null,pixels=[];
 const colors=['#e6194b','#2f6fb3','#3cb44b','#b05ac4'];
@@ -5,7 +6,7 @@ function range(values){let lo=Infinity,hi=-Infinity;values.forEach(v=>{lo=Math.m
 function axisRange(text,fallback){
  if(!String(text||'').trim())return fallback;
  const parts=String(text).split(':').map(v=>Number(v.trim().replace(',','.')));
- if(parts.length!==2||!parts.every(Number.isFinite)||parts[1]<=parts[0])throw new Error('Диапазон оси: минимум:максимум, например 0:5');
+ if(parts.length!==2||!parts.every(Number.isFinite)||parts[1]<=parts[0])throw new Error(t('plot.axis_error'));
  return parts;
 }
 function pointLabel(index){
@@ -23,7 +24,7 @@ function draw(){
  const sx=v=>pad.l+(v-xmin)/(xmax-xmin)*(W-pad.l-pad.r),sy=v=>H-pad.b-(v-ymin)/(ymax-ymin)*(H-pad.t-pad.b);
  ctx.font='11px system-ui';ctx.lineWidth=1;
  for(let i=0;i<=5;i++){const xv=xmin+(xmax-xmin)*i/5,yv=ymin+(ymax-ymin)*i/5;ctx.strokeStyle='#e2e9ef';ctx.beginPath();ctx.moveTo(sx(xv),pad.t);ctx.lineTo(sx(xv),H-pad.b);ctx.moveTo(pad.l,sy(yv));ctx.lineTo(W-pad.r,sy(yv));ctx.stroke();ctx.fillStyle='#526477';ctx.textAlign='center';ctx.fillText(xv.toPrecision(4),sx(xv),H-20);ctx.textAlign='right';ctx.fillText(yv.toPrecision(4),pad.l-7,sy(yv)+4);}
- const labels=cfg.labels||[];ctx.textAlign='left';ctx.fillStyle='#526477';ctx.fillText(xy?(labels[0]||'x'):(cfg.axis||'t'),pad.l,H-3);ctx.fillText(xy?(labels[1]||'y'):'y',5,20);
+ const labels=cfg.labels||[];ctx.textAlign='left';ctx.fillStyle='#526477';ctx.fillText(xy?(labels[0]||'x'):(cfg.axis==='trial'?t('plot.trial_axis'):(cfg.axis||'t')),pad.l,H-3);ctx.fillText(xy?(labels[1]||'y'):'y',5,20);
  pixels=[];
  ys.forEach((values,series)=>{
    ctx.lineWidth=1.8;ctx.strokeStyle=xy?'#2f6fb3':colors[series%colors.length];
@@ -59,4 +60,23 @@ canvas.addEventListener('mousemove',e=>{
  tip.style.left=Math.max(0,Math.min(window.innerWidth-320,e.clientX+12))+'px';tip.style.top=Math.min(window.innerHeight-45,e.clientY+12)+'px';tip.style.display='block';
 });
 canvas.addEventListener('mouseleave',()=>tip.style.display='none');window.addEventListener('resize',draw);
-(async()=>{try{const q=new URLSearchParams(location.search);if(!q.get('run'))throw new Error('Сначала выполните Run.');const r=await fetch('/api/plot?run='+encodeURIComponent(q.get('run'))+'&block='+encodeURIComponent(q.get('block')));packet=await r.json();if(!r.ok)throw new Error(packet.error);document.title=packet.config.params.label||q.get('block');document.getElementById('title').textContent=document.title;document.getElementById('info').textContent=packet.data.t.length+' точек · '+(packet.config.axis==='trial'?'пробы оптимизатора':'модельное время')+(packet.config.kind==='xy_score'?' · подпись: шаг | ошибка':'');draw();}catch(e){document.getElementById('info').textContent=e.message;}})();
+let plotError = null;
+function refreshPlotLanguage(){
+ I18n.apply();
+ if(packet){
+   document.title=I18n.plotLabel(packet.config.params.label || new URLSearchParams(location.search).get('block'));
+   document.getElementById('title').textContent=document.title;
+   document.getElementById('info').textContent=t('plot.info',{n:packet.data.t.length,axis:t(packet.config.axis==='trial'?'plot.trials':'plot.time')})+(packet.config.kind==='xy_score'?t('plot.annotations'):'');
+   tip.style.display='none';draw();
+ } else if(plotError) document.getElementById('info').textContent=plotError.key?t(plotError.key):I18n.message(plotError.message);
+}
+document.getElementById('language').addEventListener('change',ev=>I18n.setLanguage(ev.target.value));
+I18n.onChange(refreshPlotLanguage);
+refreshPlotLanguage();
+(async()=>{try{
+ const q=new URLSearchParams(location.search);
+ if(!q.get('run')){plotError={key:'plot.run_first'};refreshPlotLanguage();return;}
+ const r=await fetch('/api/plot?run='+encodeURIComponent(q.get('run'))+'&block='+encodeURIComponent(q.get('block')));
+ const data=await r.json();if(!r.ok)throw new Error(data.error);
+ packet=data;refreshPlotLanguage();
+}catch(e){plotError={message:e.message};refreshPlotLanguage();}})();

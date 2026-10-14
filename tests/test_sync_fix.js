@@ -13,7 +13,7 @@ const assert = require('assert');
 
 function makeElement(id) {
   return {
-    id, textContent: '', innerHTML: '', value: '', className: '', style: {},
+    id, dataset: {}, textContent: '', innerHTML: '', value: '', className: '', style: {},
     classList: {
       _set: new Set(),
       add(c){ this._set.add(c); }, remove(c){ this._set.delete(c); },
@@ -92,6 +92,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, '..', 'xcos_mini', 'web', 'app.js'), 'utf8');
+require('./load_i18n')(sandbox);
 vm.runInContext(code, sandbox);
 const state = vm.runInContext('state', sandbox);
 const tick = ms => new Promise(r => setTimeout(r, ms));

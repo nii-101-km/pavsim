@@ -1,4 +1,4 @@
-# PavSim 0.1.0
+# PavSim 0.1.1
 
 **English** | [Русский](README.ru.md)
 
@@ -47,8 +47,12 @@ identifiers are retained for compatibility.
 
 ## Minimal example
 
-The current interface uses Russian block labels; their internal type
-identifiers are included below for reference.
+The interface starts in English. Use **EN/RU** in the top bar to switch
+languages without reloading the page. The choice is stored in localStorage
+and restored next time; browser language settings do not change the default.
+Plot windows use the same preference. If browser storage is unavailable,
+switching still works for the current page. Internal identifiers below stay
+the same in either language.
 
 1. Select Constant (Константа, `constant`) in the library and click the
    canvas to place it. Double-click the block and set `value=1`.
@@ -60,7 +64,7 @@ identifiers are included below for reference.
 5. Open the graph by double-clicking its block or following the result
    link. The expected response is `y(t)=t`.
 
-You can also edit a selected block using **Параметры** (Parameters) or **F2**.
+You can also edit a selected block using **Parameters** (Параметры in Russian) or **F2**.
 To save, enter a name and click **Save**. To load, select a name and click
 **Load**.
 
@@ -95,7 +99,7 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B tests/smoke.py
 ```
 
-225 tests passed without skips in a clean Python environment. The suite
+237 tests passed without skips in a clean Python environment. The suite
 includes numerical tests, HTTP checks, Node.js harnesses, and static checks.
 The test count alone does not establish that every browser interaction has
 been verified.
@@ -136,6 +140,8 @@ The following guides are currently in Russian:
 - [Objectives, optimization methods, and tuning settings](docs/controller-optimization.md).
 - [Calculation blocks and controllers](docs/simopt-calculation-blocks.md).
 - [Release notes and verification for 0.1.0](docs/release-0.1.0.md).
+
+[Release notes for 0.1.1](docs/release-0.1.1.md) describe the EN/RU update and its limitations.
 
 [DESIGN.md](DESIGN.md) describes the architecture and time-grid semantics in English.
 

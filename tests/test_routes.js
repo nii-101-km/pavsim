@@ -11,7 +11,7 @@ const assert = require('assert');
 
 function makeElement(id) {
   return {
-    id, textContent: '', innerHTML: '', value: '', className: '', style: {},
+    id, dataset: {}, textContent: '', innerHTML: '', value: '', className: '', style: {},
     classList: { add(){}, remove(){}, contains(){ return false; }, toggle(){} },
     appendChild(c){ return c; }, addEventListener(){}, removeEventListener(){},
     querySelectorAll(){ return []; },
@@ -69,6 +69,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, '..', 'xcos_mini', 'web', 'app.js'), 'utf8');
+require('./load_i18n')(sandbox);
 vm.runInContext(code, sandbox);
 const state = vm.runInContext("state", sandbox); // top-level const in app.js is not a sandbox property
 // deepStrictEqual fails across vm realms (different Object.prototype); compare via JSON.

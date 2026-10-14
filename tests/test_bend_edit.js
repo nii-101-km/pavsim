@@ -13,7 +13,7 @@ function makeElement(id) {
   const classes = new Set();
   if (id === 'dialog_overlay') classes.add('hidden');
   return {
-    id, textContent: '', innerHTML: '', value: '', className: '', style: {},
+    id, dataset: {}, textContent: '', innerHTML: '', value: '', className: '', style: {},
     classList: {
       add(c){ classes.add(c); },
       remove(c){ classes.delete(c); },
@@ -76,6 +76,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, '..', 'xcos_mini', 'web', 'app.js'), 'utf8');
+require('./load_i18n')(sandbox);
 vm.runInContext(code, sandbox);
 const state = vm.runInContext("state", sandbox);
 

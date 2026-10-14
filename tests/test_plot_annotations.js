@@ -2,10 +2,10 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const text=[],arcs=[],events={};
 const ctx=new Proxy({measureText:s=>({width:String(s).length*6}),fillText:(s,x,y)=>text.push(String(s)),arc:(x,y)=>arcs.push([x,y])},{get:(o,k)=>k in o?o[k]:()=>{}});
 const canvas={clientWidth:600,clientHeight:400,getContext:()=>ctx,addEventListener:(k,f)=>events[k]=f,getBoundingClientRect:()=>({left:0,top:0})};
-const elements={plot:canvas,tip:{style:{},textContent:''},title:{},info:{}};
+const elements={plot:canvas,tip:{style:{},textContent:''},title:{},info:{},language:{addEventListener(){}}};
 const data={data:{t:[1,3],outputs:[[2,8],[2,8],[.1,.02]],y:[2,8]},config:{kind:'xy_score',axis:'trial',params:{label:'Test',x_range:'0:10',y_range:'0:10'},score_connected:true}};
 const sandbox={document:{getElementById:id=>elements[id]},window:{addEventListener(){},innerWidth:600,innerHeight:400},location:{search:'?run=a&block=b'},URLSearchParams,fetch:async()=>({ok:true,json:async()=>data}),console};
-vm.createContext(sandbox);vm.runInContext(fs.readFileSync('xcos_mini/web/plot.js','utf8'),sandbox);
+vm.createContext(sandbox);require('./load_i18n')(sandbox);vm.runInContext(fs.readFileSync('xcos_mini/web/plot.js','utf8'),sandbox);
 (async()=>{
  await new Promise(r=>setTimeout(r,0));
  assert(text.includes('1 | 0.10000'));assert(text.includes('3 | 0.020000'));
@@ -16,5 +16,15 @@ vm.createContext(sandbox);vm.runInContext(fs.readFileSync('xcos_mini/web/plot.js
  vm.runInContext("packet.config.params.x_range='0:5';packet.config.params.y_range='0:5';draw()",sandbox);
  assert.strictEqual(vm.runInContext('pixels.length',sandbox),1,'out-of-range points must not remain hover targets');
  assert.throws(()=>vm.runInContext("axisRange('5:0',[0,1])",sandbox));
+ const before=vm.runInContext('JSON.stringify(packet)',sandbox);
+ sandbox.I18n.setLanguage('ru');assert.match(elements.info.textContent,/Точек 2.*пробы оптимизатора/);
+ assert.strictEqual(vm.runInContext('JSON.stringify(packet)',sandbox),before);
+ sandbox.I18n.setLanguage('en');assert.match(elements.info.textContent,/2 points.*optimizer trials/);
+ assert.strictEqual(vm.runInContext('JSON.stringify(packet)',sandbox),before);
+ assert(text.includes('x')&&text.includes('y'));
+ vm.runInContext("packet.config.kind='series'",sandbox);
+ sandbox.I18n.setLanguage('ru');sandbox.I18n.setLanguage('en');
+ assert(text.includes('trial')&&text.includes('проба'));
+ console.log('PLOT LANGUAGE TESTS PASSED');
  console.log('PLOT ANNOTATION TESTS PASSED');
 })().catch(e=>{console.error(e);process.exit(1);});

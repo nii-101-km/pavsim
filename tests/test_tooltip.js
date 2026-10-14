@@ -12,7 +12,7 @@ const assert = require('assert');
 function makeElement(id) {
   const classes = new Set();
   return {
-    id, textContent: '', innerHTML: '', value: '', className: '', style: {},
+    id, dataset: {}, textContent: '', innerHTML: '', value: '', className: '', style: {},
     classList: {
       add(c){ classes.add(c); }, remove(c){ classes.delete(c); },
       contains(c){ return classes.has(c); }, toggle(c){ classes.has(c) ? classes.delete(c) : classes.add(c); },
@@ -74,6 +74,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, '..', 'xcos_mini', 'web', 'app.js'), 'utf8');
+require('./load_i18n')(sandbox);
 vm.runInContext(code, sandbox);
 
 const tick = ms => new Promise(r => setTimeout(r, ms));

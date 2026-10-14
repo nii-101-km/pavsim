@@ -1,4 +1,6 @@
 'use strict';
+const t = I18n.t;
+let statusPresentation = null;
 const state = {
   blocks: [], connections: [], blockTypes: {}, libraryTree: null,
   selected: null, placingType: null, pendingConn: null, drag: null,
@@ -27,9 +29,14 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 function canvasPos(ev) { const r = canvas.getBoundingClientRect(); return {x: ev.clientX - r.left, y: ev.clientY - r.top}; }
-function setStatus(kind, text) {
+function setStatus(kind, key, values = {}) {
+  statusPresentation = {kind, key, values};
   const el = document.getElementById('statusbar');
-  el.textContent = text; el.className = (kind === 'error') ? 'error' : '';
+  const localized = {...values};
+  if ('loadErrors' in localized) localized.error=localized.loadErrors.map(e=>e[0]+': '+I18n.message(e[1])).join('; ');
+  if ('blockType' in localized) localized.name=I18n.blockName(state.blockTypes[localized.blockType] || {name:localized.blockType});
+  if ('error' in localized) localized.error = I18n.message(localized.error);
+  el.textContent = t(key, localized); el.className = (kind === 'error') ? 'error' : '';
 }
 function roundRect(c, x, y, w, h, r) {
   c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
@@ -251,9 +258,9 @@ function toggleBendEditMode() {
   }
   updateModeButtons();
   if (state.bendEditMode === 'edit_bends') {
-    setStatus('info', 'Add Bend mode: click a segment to add a detour. Esc to exit.');
+    setStatus('info', 'status.add_bend');
   } else if (state.bendEditMode === null) {
-    setStatus('info', 'Bend mode off.');
+    setStatus('info', 'status.bend_off');
   }
   draw();
 }
@@ -266,9 +273,9 @@ function toggleResetRouteMode() {
   }
   updateModeButtons();
   if (state.bendEditMode === 'reset_route') {
-    setStatus('info', 'Reset Route mode: click a connection to reset its route. Esc to exit.');
+    setStatus('info', 'status.reset_route');
   } else if (state.bendEditMode === null) {
-    setStatus('info', 'Bend mode off.');
+    setStatus('info', 'status.bend_off');
   }
   draw();
 }
@@ -317,20 +324,20 @@ function drawBlock(b) {
   roundRect(ctx, b.x, b.y, W, H, 8); ctx.fill(); ctx.stroke();
   ctx.fillStyle='#1c2733'; ctx.font='600 13px system-ui,sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText((b.id+' · '+(bt.display_name || b.type)).slice(0,22), b.x+W/2, b.y+12);
-  if (isGraph) { ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='#c2185b'; ctx.fillText('plot', b.x+W/2, b.y+H-8); }
-  else if (stateful) { ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='#2f6fb3'; ctx.fillText(bt.state_kind, b.x+W/2, b.y+H-8); }
+  ctx.fillText((b.id+' · '+I18n.blockName({...bt,name:b.type})).slice(0,22), b.x+W/2, b.y+12);
+  if (isGraph) { ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='#c2185b'; ctx.fillText(t('ui.plot'), b.x+W/2, b.y+H-8); }
+  else if (stateful) { ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='#2f6fb3'; ctx.fillText(t('ui.'+bt.state_kind), b.x+W/2, b.y+H-8); }
   const nIn=bt.n_inputs||0, nOut=bt.n_outputs||0;
   for (let i=0;i<nIn;i++){const p=inputPort(b,i);ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle='#3cb44b';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
   for (let j=0;j<nOut;j++){const p=outputPort(b,j);ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle='#e6194b';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
   if (bt.input_labels) {
     ctx.font='11px system-ui,sans-serif'; ctx.fillStyle='#1c2733'; ctx.textAlign='left';
-    bt.input_labels.forEach((label,i)=>{const p=inputPort(b,i);ctx.fillText(label,p.x+9,p.y);});
+    bt.input_labels.forEach((label,i)=>{const p=inputPort(b,i);ctx.fillText(I18n.port(label),p.x+9,p.y);});
     ctx.textAlign='center';
   }
   if (bt.output_labels) {
     ctx.font='11px system-ui,sans-serif'; ctx.fillStyle='#1c2733'; ctx.textAlign='right';
-    bt.output_labels.forEach((label,i)=>{const p=outputPort(b,i);ctx.fillText(label,p.x-9,p.y);});
+    bt.output_labels.forEach((label,i)=>{const p=outputPort(b,i);ctx.fillText(I18n.port(label),p.x-9,p.y);});
     ctx.textAlign='center';
   }
 }
@@ -362,10 +369,10 @@ function portAt(x, y) {
 // ---- connector tooltips (HTML tooltip div) --------------------------------
 const portTooltipEl = document.getElementById('port_tooltip');
 function portTooltip(port) {
-  const dir = port.kind === 'in' ? 'Input' : 'Output';
+  const dir = t(port.kind === 'in' ? 'ui.input' : 'ui.output');
   const bt = state.blockTypes[port.block && port.block.type] || {};
   const labels = port.kind === 'in' ? bt.input_labels : bt.output_labels;
-  if (labels && labels[port.index]) return labels[port.index];
+  if (labels && labels[port.index]) return I18n.port(labels[port.index]);
   return dir + ' ' + (port.index + 1);
 }
 function updateCanvasTooltip(x, y) {
@@ -482,7 +489,7 @@ function enterSubsystem(subId) {
   }
   const sub = state.blocks.find(b => b.id === subId && ['subsystem','experiment'].includes(b.type));
   const parentView=state.activeView;
-  if (!sub) { setStatus('error', 'Subsystem not found: ' + subId); return; }
+  if (!sub) { setStatus('error', 'status.subsystem_missing', {id:subId}); return; }
   if (!sub.internal) {
     sub.internal = {blocks: [], connections: []};
     if (sub.type==='experiment') {
@@ -515,7 +522,7 @@ function enterSubsystem(subId) {
   state.blocks.forEach(b => { const m = /^b(\d+)$/.exec(b.id); if (m) mx = Math.max(mx, parseInt(m[1], 10)); });
   state.nextId = mx + 1;
   draw();
-  setStatus('ok', sub.type==='experiment' ? 'Внутри эксперимента '+subId+'. Run запускает только этот прогон.' : "Inside subsystem '"+subId+"'. Press Back to return to parent.");
+  setStatus('ok', sub.type==='experiment' ? 'status.in_experiment' : 'status.in_subsystem', {id:subId});
 }
 function exitSubsystem() {
   if(state.activeView && state.activeView.includes('/')) {
@@ -537,7 +544,7 @@ function exitSubsystem() {
   state.blocks.forEach(b => { const m = /^b(\d+)$/.exec(b.id); if (m) mx = Math.max(mx, parseInt(m[1], 10)); });
   state.nextId = mx + 1;
   draw();
-  setStatus('ok', 'Back to parent diagram.');
+  setStatus('ok', 'status.back');
 }
 function updateBackButton() {
   const btn = document.getElementById('back_to_parent');
@@ -581,8 +588,7 @@ async function loadLibrary() {
   await loadBlockTypes();
   renderLibraryTree();
   if (data.load_errors && data.load_errors.length) {
-    const msg = data.load_errors.map(e => e[0] + ': ' + e[1]).join('; ');
-    setStatus('error', 'Some block files failed to load: ' + msg);
+    setStatus('error', 'status.library_errors', {loadErrors:data.load_errors});
   }
 }
 function renderLibraryTree() {
@@ -597,11 +603,11 @@ function renderNode(node) {
   if (node.type === 'category') {
     const row = document.createElement('div'); row.className = 'tree-category';
     const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '\u25be';
-    row.appendChild(arrow); row.appendChild(document.createTextNode(node.name));
+    row.appendChild(arrow); row.appendChild(localizedText('category.'+node.name,node.name));
     const ul = document.createElement('ul'); ul.className = 'tree-blocks';
     (node.blocks || []).forEach(name => {
-      const b = document.createElement('li'); b.className = 'tree-block'; b.textContent = (state.blockTypes[name] || {}).display_name || name;
-      b.title = (state.blockTypes[name] || {}).description || name;
+      const b = document.createElement('li'); b.className = 'tree-block'; b.textContent = I18n.blockName(state.blockTypes[name] || {name}); b.dataset.blockType=name;
+      b.title = I18n.blockDescription(state.blockTypes[name] || {name});
       b.addEventListener('click', () => selectPlacingBlock(name));
       ul.appendChild(b);
     });
@@ -617,17 +623,17 @@ function renderNode(node) {
 function selectPlacingBlock(name) {
   state.placingType = name;
   document.querySelectorAll('.tree-block.active').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tree-block').forEach(el => { if (el.textContent === name) el.classList.add('active'); });
-  setStatus('info', "Placing '" + name + "' \u2014 click the canvas to drop it (Esc to cancel).");
+  document.querySelectorAll('.tree-block').forEach(el => { if (el.dataset.blockType === name) el.classList.add('active'); });
+  setStatus('info', 'status.placing', {blockType:name});
 }
 
 // ---- simulation -----------------------------------------------------------
 async function runSim() {
   if (state.blocks.length === 0) {
-    setStatus('error', 'Nothing to simulate: the diagram is empty.');
+    setStatus('error', 'status.empty');
     return;
   }
-  setStatus('info', 'Running simulation\u2026');
+  setStatus('info', 'status.running');
   try {
     const body = {
       model: toModelDict(),
@@ -638,7 +644,7 @@ async function runSim() {
     const active=(state.rootBlocks || []).find(b=>b.id===(state.activeView || '').split('/')[0] && b.type==='experiment');
     if(active)body.experiment=active.id;
     const fingerprint = JSON.stringify(body.model);
-    if (body.model.blocks.some(b=>b.type==='experiment')) setStatus('info','Выполняю независимые эксперименты и подбор…');
+    if (body.model.blocks.some(b=>b.type==='experiment')) setStatus('info','status.experiments');
     const data = await api('/api/simulate', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -646,7 +652,7 @@ async function runSim() {
     });
     const tuning = data.optimization || [];
     if ((tuning.length || (data.experiments || []).length) && JSON.stringify(toModelDict()) !== fingerprint) {
-      setStatus('error', 'Схема изменилась во время подбора. Повторите Run.'); return;
+      setStatus('error', 'status.changed'); return;
     }
     tuning.forEach(report=>{
       let nodes=state.rootBlocks || state.blocks;
@@ -663,26 +669,17 @@ async function runSim() {
     state.lastResults = data.results || {};
     updateGraphWindows();
     const nGraph = state.blocks.filter(b => b.type.startsWith('graph_')).length;
-    setStatus('ok', (data.experiments && data.experiments.length ? data.experiments.map(e=>e.block_id+': J='+e.result.toPrecision(5)+'; t_end='+e.t_end+', h='+e.h+', '+e.method.toUpperCase()).join('\n') : 'Simulation finished: '+data.n_steps+' steps, '+Object.keys(state.lastResults).length+' signals recorded.') +
-      (nGraph ? ' Double-click a graph block to view its plot in a separate window.' : '') +
-      tuning.map(r=>'\n'+r.block_id+': '+Object.entries(r.values).map(([k,v])=>k+'='+v.toPrecision(5)).join(', ')+
-        '; расчётов '+r.evaluations+(r.experiment_id ? '; итоговая J='+r.score.toPrecision(5)+'.' : r.converged ? '; уставка достигнута.' : '; удержание уставки не достигнуто.')).join(''));
-    const links=document.createElement('div');
-    state.blocks.filter(b=>b.type.startsWith('graph_')).forEach(b=>{
-      const a=document.createElement('a');a.textContent='Открыть '+(b.params.label || b.id)+' · ';
-      a.href='/plot.html?run='+encodeURIComponent(state.lastRunId)+'&block='+encodeURIComponent(resultKeyForBlock(b));a.target='_blank';links.appendChild(a);
-    });
-    document.getElementById('statusbar').appendChild(links);
+    renderRunSummary(data);
 
   } catch (err) {
-    setStatus('error', 'Simulation failed: ' + err.message);
+    setStatus('error', 'status.sim_failed', {error:err.message});
   }
 }
 
 // ---- save / load ----------------------------------------------------------
 async function saveModel() {
   const name = document.getElementById('model_name').value.trim();
-  if (!name) { setStatus('error', 'Enter a model name before saving.'); return; }
+  if (!name) { setStatus('error', 'status.name_required'); return; }
   try {
     await api('/api/save', {
       method: 'POST',
@@ -690,9 +687,9 @@ async function saveModel() {
       body: JSON.stringify({name: name, model: toModelDict()}),
     });
     await refreshModels(name);
-    setStatus('ok', "Model '" + name + "' saved.");
+    setStatus('ok', 'status.saved', {name});
   } catch (err) {
-    setStatus('error', 'Save failed: ' + err.message);
+    setStatus('error', 'status.save_failed', {error:err.message});
   }
 }
 async function refreshModels(preferredName) {
@@ -719,7 +716,7 @@ async function refreshModels(preferredName) {
 }
 async function loadModel() {
   const name = document.getElementById('load_list').value;
-  if (!name) { setStatus('error', 'Choose a model to load.'); return; }
+  if (!name) { setStatus('error', 'status.choose_model'); return; }
   try {
     const data = await api('/api/load?name=' + encodeURIComponent(name));
     const missing = [];
@@ -731,16 +728,15 @@ async function loadModel() {
     });
     if (missing.length) {
       const uniq = Array.from(new Set(missing));
-      setStatus('error', "Cannot load '" + name + "': missing block implementation(s): " + uniq.join(', ') +
-        '. Add the block file(s) to the library and press Refresh, or remove those blocks.');
+      setStatus('error', 'status.missing_blocks', {name,types:uniq.join(', ')});
       return;
     }
     fromModelDict(data.model);
     draw();
     document.getElementById('model_name').value = name;
-    setStatus('ok', "Model '" + name + "' loaded (" + state.blocks.length + ' blocks, ' + state.connections.length + ' connections).');
+    setStatus('ok', 'status.loaded', {name,blocks:state.blocks.length,connections:state.connections.length});
   } catch (err) {
-    setStatus('error', 'Load failed: ' + err.message);
+    setStatus('error', 'status.load_failed', {error:err.message});
   }
 }
 
@@ -755,7 +751,7 @@ function openGraphWindow(block) {
   const existing=state.graphWindows[key];
   if(existing&&!existing.closed){existing.location.href=url;try{existing.focus();}catch(e){}return existing;}
   const win=window.open(url,'_blank','width=860,height=600');
-  if(!win){setStatus('error','Разрешите открытие окна графика.');return null;}
+  if(!win){setStatus('error','status.popup');return null;}
   state.graphWindows[key]=win;return win;
 }
 
@@ -772,31 +768,31 @@ let dialogBlock = null;
 function openDialog(block) {
   dialogBlock = block;
   const bt = state.blockTypes[block.type] || {parameters: {}};
-  document.getElementById('dialog_title').textContent = block.id + ' \u2014 ' + (bt.display_name || block.type);
+  document.getElementById('dialog_title').textContent = block.id + ' \u2014 ' + I18n.blockName({...bt,name:block.type});
   const body = document.getElementById('dialog_body');
   body.innerHTML = '';
   const params = bt.parameters || {};
   const keys = Object.keys(params);
   if (keys.length === 0) {
     const p = document.createElement('p');
-    p.textContent = 'This block has no parameters.';
+    p.dataset.i18n='ui.no_parameters'; p.textContent = t('ui.no_parameters');
     body.appendChild(p);
   }
   keys.forEach(k => {
     const def = params[k];
     const label = document.createElement('label');
-    label.appendChild(document.createTextNode((bt.parameter_labels && bt.parameter_labels[k] || k) + ' '));
+    label.appendChild(localizedText('param.'+k,(bt.parameter_labels || {})[k] || k)); label.title=PAVSIM_CATALOG.en['hint.param.'+k]?t('hint.param.'+k):k;
     let input;
     if (typeof def === 'boolean') {
       input = document.createElement('input'); input.type = 'checkbox';
     } else if (bt.parameter_choices && bt.parameter_choices[k]) {
       input = document.createElement('select');
-      bt.parameter_choices[k].forEach(choice=>{const o=document.createElement('option');o.value=choice.value;o.textContent=choice.label;input.appendChild(o);});
+      bt.parameter_choices[k].forEach(choice=>{const o=document.createElement('option');o.value=choice.value;o.dataset.choice=choice.value;o.dataset.choiceFallback=choice.label;o.textContent=choiceText(choice.value,choice.label);input.appendChild(o);});
     } else if (typeof def === 'string') {
       if (k === 'type' && block.type === 'signal_generator') {
         input = document.createElement('select');
         ['sine', 'square', 'ramp', 'step'].forEach(v => {
-          const o = document.createElement('option'); o.value = v; o.textContent = v;
+          const o = document.createElement('option'); o.value = v; o.dataset.choice=v; o.textContent=t('choice.'+v);
           input.appendChild(o);
         });
       } else {
@@ -808,8 +804,9 @@ function openDialog(block) {
     input.value = (block.params && k in block.params) ? block.params[k] : def;
     if (typeof def === 'boolean') input.checked = (block.params && k in block.params) ? Boolean(block.params[k]) : def;
     input.id = 'dlg_' + k;
-    if(k==='x_range' || k==='y_range'){input.placeholder='авто или 0:5';input.title='Пустая строка — автомасштаб. Формат: минимум:максимум.';}
-    if(k==='algorithm_options'){input.placeholder='initial_step=0.1; tolerance=0.0005';input.title='Поиск в нормированных координатах. У тяжёлого шарика initial_step умножает градиент, momentum задаёт инерцию. Пустая строка: настройки по умолчанию.';}
+    if (k==='label') { input.dataset.rawLabel=input.value; input.dataset.displayLabel=I18n.plotLabel(input.value); input.value=input.dataset.displayLabel; }
+    if(k==='x_range' || k==='y_range'){input.dataset.i18nPlaceholder='ui.range_placeholder';input.dataset.i18nTitle='ui.range_hint'; input.placeholder=t('ui.range_placeholder');input.title=t('ui.range_hint');}
+    if(k==='algorithm_options'){input.placeholder='initial_step=0.1; tolerance=0.0005';input.dataset.i18nTitle='ui.algorithm_hint';input.title=t('ui.algorithm_hint');}
     label.appendChild(input);
     body.appendChild(label);
   });
@@ -833,14 +830,14 @@ function applyDialog() {
       const v = parseFloat(el.value);
       dialogBlock.params[k] = isNaN(v) ? def : v;
     } else {
-      dialogBlock.params[k] = el.value;
+      dialogBlock.params[k] = k==='label' && el.value===el.dataset.displayLabel ? el.dataset.rawLabel : el.value;
     }
   });
   const owner=dialogBlock;
   closeDialog();
   if(owner.type==='experiment' && state.activeView===owner.id) ['t_end','h','method'].forEach(id=>document.getElementById(id).value=owner.params[id]);
   draw();
-  setStatus('ok', "Parameters updated for '" + id + "'.");
+  setStatus('ok', 'status.updated', {id});
 }
 
 // ---- block deletion --------------------------------------------------------
@@ -849,7 +846,7 @@ function deleteBlock(id) {
   if (!b) return;
   // Protect boundary terminals from deletion
   if (['in1_terminal','out1_terminal','experiment_input','experiment_result'].includes(b.type)) {
-    setStatus('error', 'Boundary terminal ' + id + ' cannot be deleted. It is mandatory for the subsystem.');
+    setStatus('error', 'status.boundary', {id});
     return;
   }
   // Prevent deleting a subsystem while inside it (should not happen, but guard)
@@ -868,13 +865,13 @@ function deleteBlock(id) {
   delete state.graphWindows[id];
   updateBackButton();
   draw();
-  setStatus('ok', "Removed block '" + id + "'.");
+  setStatus('ok', 'status.removed', {id});
 }
 function deleteConnection(idx) {
   state.connections.splice(idx, 1);
   state.selected = null;
   draw();
-  setStatus('ok', 'Connection removed.');
+  setStatus('ok', 'status.connection_removed');
 }
 
 // ---- canvas events --------------------------------------------------------
@@ -971,8 +968,7 @@ canvas.addEventListener('mouseup', ev => {
       const occupied = state.connections.find(c => c.to === port.block.id && c.toPort === port.index);
       if (occupied) {
         const same = occupied.from === state.pendingConn.from && occupied.fromPort === state.pendingConn.fromPort;
-        setStatus(same ? 'info' : 'error', same ? 'Этот провод уже подключён.' :
-          'Вход '+port.block.id+' ('+(port.index+1)+') занят. Удалите прежний провод или используйте сумматор.');
+        setStatus(same ? 'info' : 'error', same ? 'status.connected' : 'status.occupied', {id:port.block.id,port:port.index+1});
       } else {
         state.connections.push({
           from: state.pendingConn.from, fromPort: state.pendingConn.fromPort,
@@ -1000,14 +996,14 @@ canvas.addEventListener('click', ev => {
   if (state.placingType) {
     // Prevent placing subsystem inside a subsystem (one-level restriction)
     if (state.activeView && (state.placingType==='experiment' || (state.placingType==='subsystem' && containerForView(state.activeView).type!=='experiment'))) {
-      setStatus('error', 'Cannot place a Subsystem inside another Subsystem (one-level hierarchy only).');
+      setStatus('error', 'status.nested_subsystem');
       state.placingType = null;
       document.querySelectorAll('.tree-block.active').forEach(el => el.classList.remove('active'));
       return;
     }
     const bt = state.blockTypes[state.placingType];
     if (!bt) {
-      setStatus('error', "Block '" + state.placingType + "' is not available (implementation missing). Press Refresh in the library.");
+      setStatus('error', 'status.block_unavailable', {type:state.placingType});
       state.placingType = null;
       document.querySelectorAll('.tree-block.active').forEach(el => el.classList.remove('active'));
       return;
@@ -1025,7 +1021,7 @@ canvas.addEventListener('click', ev => {
     document.querySelectorAll('.tree-block.active').forEach(el => el.classList.remove('active'));
     updateBackButton();
     draw();
-    setStatus('ok', "Placed '" + block.type + "' as " + id + '.');
+    setStatus('ok', 'status.placed', {blockType:block.type,id});
     return;
   }
   const port = portAt(p.x, p.y);
@@ -1047,7 +1043,7 @@ canvas.addEventListener('dblclick', ev => {
   } else if (b.type.startsWith('graph_')) {
     openGraphWindow(b);
   } else if (['in1_terminal','out1_terminal','experiment_input','experiment_result'].includes(b.type)) {
-    setStatus('info', 'Boundary terminal ' + b.id + ' cannot be edited.');
+    setStatus('info', 'status.boundary_edit');
   } else {
     openDialog(b);
   }
@@ -1074,7 +1070,7 @@ window.addEventListener('keydown', ev => {
     if (state.bendEditMode) {
       state.bendEditMode = null;
       updateModeButtons();
-      setStatus('info', 'Bend mode off.');
+      setStatus('info', 'status.bend_off');
       draw();
       return;
     }
@@ -1095,8 +1091,8 @@ window.addEventListener('keydown', ev => {
 
 function editSelectedBlock() {
   const block=state.selected && state.selected.kind==='block' ? blockById(state.selected.id) : null;
-  if(!block){setStatus('info','Выберите блок для настройки.');return;}
-  if(['in1_terminal','out1_terminal','experiment_input','experiment_result'].includes(block.type)){setStatus('info','Граничный терминал не редактируется.');return;}
+  if(!block){setStatus('info','status.select_block');return;}
+  if(['in1_terminal','out1_terminal','experiment_input','experiment_result'].includes(block.type)){setStatus('info','status.boundary_edit');return;}
   openDialog(block);
 }
 // ---- toolbar wiring -------------------------------------------------------
@@ -1108,8 +1104,8 @@ document.getElementById('run').addEventListener('click', runSim);
 document.getElementById('save').addEventListener('click', saveModel);
 document.getElementById('load').addEventListener('click', loadModel);
 document.getElementById('clear').addEventListener('click', () => {
-  if (state.blocks.length === 0) { setStatus('info', 'Diagram is already empty.'); return; }
-  if (!confirm('Clear the whole diagram?')) return;
+  if (state.blocks.length === 0) { setStatus('info', 'status.already_empty'); return; }
+  if (!confirm(t('status.clear_confirm'))) return;
   state.blocks = state.rootBlocks = [];
   state.connections = state.rootConnections = [];
   state.activeView = null; state.selected = null; state.lastResults = null;
@@ -1120,15 +1116,15 @@ document.getElementById('clear').addEventListener('click', () => {
     delete state.graphWindows[bid];
   }
   draw();
-  setStatus('ok', 'Diagram cleared.');
+  setStatus('ok', 'status.cleared');
 });
 document.getElementById('library_refresh').addEventListener('click', async () => {
-  setStatus('info', 'Refreshing library from disk\u2026');
+  setStatus('info', 'status.refreshing');
   try {
     await loadLibrary();
-    setStatus('ok', 'Library refreshed from the file system.');
+    setStatus('ok', 'status.refreshed');
   } catch (err) {
-    setStatus('error', 'Library refresh failed: ' + err.message);
+    setStatus('error', 'status.refresh_failed', {error:err.message});
   }
 });
 document.getElementById('dialog_ok').addEventListener('click', applyDialog);
@@ -1143,7 +1139,7 @@ document.getElementById('dialog_overlay').addEventListener('click', ev => {
   try {
     await loadLibrary();
   } catch (err) {
-    setStatus('error', 'Could not load the block library: ' + err.message);
+    setStatus('error', 'status.library_failed', {error:err.message});
   }
   await refreshModels();
   draw();
@@ -1157,3 +1153,61 @@ document.getElementById('experiment_settings').addEventListener('click',()=>{
  const owner=(state.rootBlocks || []).find(b=>b.id===(state.activeView || '').split('/')[0] && b.type==='experiment');
  if(owner)openDialog(owner);
 });
+
+
+// ---- display-only language switching -------------------------------------
+function choiceText(value, fallback) {
+  const key=(['rk4','euler'].includes(value)?'literal.':'choice.')+value;
+  return PAVSIM_CATALOG.en[key] ? t(key) : fallback;
+}
+function localizedText(key, fallback) {
+  const span=document.createElement('span');if(PAVSIM_CATALOG.en[key])span.dataset.i18n=key;
+  span.textContent=PAVSIM_CATALOG.en[key] ? t(key) : fallback;return span;
+}
+function renderRunSummary(data) {
+  const tuning=data.optimization || [];
+  const experiments=data.experiments || [];
+  const nGraph=state.blocks.filter(b=>b.type.startsWith('graph_')).length;
+  let text=experiments.length ? experiments.map(e=>e.block_id+': J='+e.result.toPrecision(5)+'; t_end='+e.t_end+', h='+e.h+', '+e.method.toUpperCase()).join('\n') :
+    t('status.finished',{steps:data.n_steps,signals:Object.keys(state.lastResults).length});
+  text+=(nGraph ? t('status.plot_hint') : '')+tuning.map(r=>'\n'+r.block_id+': '+Object.entries(r.values).map(([k,v])=>k+'='+v.toPrecision(5)).join(', ')+
+    t('status.evaluations',{n:r.evaluations})+(r.experiment_id ? t('status.score',{score:r.score.toPrecision(5)}) : t(r.converged?'status.converged':'status.not_converged'))).join('');
+  setStatus('ok',text);
+  statusPresentation={run:data};
+  const links=document.createElement('div');
+  state.blocks.filter(b=>b.type.startsWith('graph_')).forEach(b=>{
+    const a=document.createElement('a');a.textContent=t('status.open_plot',{name:I18n.plotLabel(b.params.label || b.id)});
+    a.href='/plot.html?run='+encodeURIComponent(state.lastRunId)+'&block='+encodeURIComponent(resultKeyForBlock(b));a.target='_blank';links.appendChild(a);
+  });
+  document.getElementById('statusbar').appendChild(links);
+}
+function refreshLanguage() {
+  I18n.apply();
+  document.querySelectorAll('[data-block-type]').forEach(el=>{
+    const bt=state.blockTypes[el.dataset.blockType] || {name:el.dataset.blockType};
+    el.textContent=I18n.blockName(bt);el.title=I18n.blockDescription(bt);
+  });
+  document.querySelectorAll('[data-choice]').forEach(el=>{
+    el.textContent=choiceText(el.dataset.choice,el.dataset.choiceFallback || el.dataset.choice);
+  });
+  if(dialogBlock) {
+    const bt=state.blockTypes[dialogBlock.type] || {name:dialogBlock.type};
+    document.getElementById('dialog_title').textContent=dialogBlock.id+' — '+I18n.blockName(bt);
+    Object.keys(bt.parameters || {}).forEach(k=>{
+      const input=document.getElementById('dlg_'+k);
+      if(input && input.parentElement)input.parentElement.title=PAVSIM_CATALOG.en['hint.param.'+k]?t('hint.param.'+k):k;
+      if(k==='label' && input && input.value===input.dataset.displayLabel) {
+        input.dataset.displayLabel=I18n.plotLabel(input.dataset.rawLabel);input.value=input.dataset.displayLabel;
+      }
+    });
+  }
+  if(statusPresentation) {
+    if(statusPresentation.run)renderRunSummary(statusPresentation.run);
+    else setStatus(statusPresentation.kind,statusPresentation.key,statusPresentation.values);
+  }
+  portTooltipEl.classList.add('hidden');
+  resizeCanvas(); // Toolbar wrapping can change the canvas height in either language.
+}
+document.getElementById('language').addEventListener('change',ev=>I18n.setLanguage(ev.target.value));
+I18n.onChange(refreshLanguage);
+refreshLanguage();

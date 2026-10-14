@@ -78,7 +78,7 @@ class TestBoundaryTerminals(unittest.TestCase):
     def test_boundary_terminal_delete_protection(self):
         """Deleting In1 or Out1 must be blocked with an error message."""
         code = _app_js()
-        self.assertIn("cannot be deleted", code,
+        self.assertIn("status.boundary", code,
                       "boundary terminal deletion must be blocked")
 
     def test_in1_has_one_output(self):

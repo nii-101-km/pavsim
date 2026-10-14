@@ -12,7 +12,7 @@ const assert = require('assert');
 function makeElement(id) {
   const classes = new Set();
   return {
-    id, textContent: '', innerHTML: '', value: '', className: '', style: {},
+    id, dataset: {}, textContent: '', innerHTML: '', value: '', className: '', style: {},
     classList: {
       add(c){ classes.add(c); }, remove(c){ classes.delete(c); },
       contains(c){ return classes.has(c); }, toggle(c){ classes.has(c) ? classes.delete(c) : classes.add(c); },
@@ -75,6 +75,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, '..', 'xcos_mini', 'web', 'app.js'), 'utf8');
+require('./load_i18n')(sandbox);
 vm.runInContext(code, sandbox);
 
 const tick = ms => new Promise(r => setTimeout(r, ms));
@@ -96,7 +97,7 @@ const tick = ms => new Promise(r => setTimeout(r, ms));
   const before=JSON.stringify(sandbox.toModelDict());
   drag(152,149,300,129); // b -> already occupied sum input 0
   assert.strictEqual(JSON.stringify(sandbox.toModelDict()),before,'rejection must preserve the wire and its route');
-  assert.match(elements.statusbar.textContent,/занят/);
+  assert.match(elements.statusbar.textContent,/occupied/);
   assert.strictEqual(vm.runInContext('state.pendingConn',sandbox),null);
   drag(152,49,300,129); // exact duplicate
   assert.strictEqual(JSON.stringify(sandbox.toModelDict()),before);

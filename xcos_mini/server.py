@@ -36,6 +36,7 @@ _ROOT = os.path.dirname(_HERE)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
+from xcos_mini import __version__  # noqa: E402
 from xcos_mini.core import Library, Model, Engine, BlockError  # noqa: E402
 from xcos_mini.subsystem import expand_subsystems  # noqa: E402
 from xcos_mini.optimization import optimize, simulate_with_optimizers, finite  # noqa: E402
@@ -108,7 +109,7 @@ def _serialize_results(results):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PavSim/0.1"
+    server_version = "PavSim/" + __version__
     lib = None  # set in main()
 
     # -- helpers ----------------------------------------------------------- #

@@ -1,0 +1,23 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const text=[],arcs=[],events={};
+const ctx=new Proxy({measureText:s=>({width:String(s).length*6}),fillText:s=>text.push(String(s)),arc:(x,y)=>arcs.push([x,y])},{get:(o,k)=>k in o?o[k]:()=>{}});
+const canvas={clientWidth:600,clientHeight:400,getContext:()=>ctx,addEventListener:(k,f)=>events[k]=f,getBoundingClientRect:()=>({left:0,top:0})};
+const elements={plot:canvas,tip:{style:{},textContent:''},title:{},info:{},language:{addEventListener(){}}};
+const data={data:{t:[1,2,3],outputs:[[1,2,3],[4,5,6],[.1,.2,.3]],y:[1,2,3]},config:{kind:'xy_score',axis:'signal',params:{x_start:'0',x_end:'5',y_start:'0',y_end:'8',last_points:2},score_connected:true},complete:true};
+const sandbox={document:{getElementById:id=>elements[id]},window:{addEventListener(){},innerWidth:600,innerHeight:400},location:{search:'?run=a&block=b'},URLSearchParams,fetch:async()=>({ok:true,json:async()=>data}),console};
+vm.createContext(sandbox);require('./load_i18n')(sandbox);vm.runInContext(fs.readFileSync('shell/web/plot.js','utf8'),sandbox);
+(async()=>{
+ await new Promise(r=>setTimeout(r,0));
+ assert.strictEqual(vm.runInContext('pixels.length',sandbox),2);
+ assert(!text.includes('1 | 0.10000'));
+ assert(text.includes('2 | 0.20000')&&text.includes('3 | 0.30000'));
+ assert(text.includes('0.000')&&text.includes('5.000')&&text.includes('8.000'));
+ assert.match(elements.info.textContent,/2 points/);
+ assert.strictEqual(data.data.t.length,3,'display limit must not delete data');
+ events.mousemove({clientX:arcs[0][0],clientY:arcs[0][1]});
+ assert.match(elements.tip.textContent,/2 \| 0\.20000/);
+ vm.runInContext('packet.config.params.last_points=0;draw()',sandbox);
+ assert.strictEqual(vm.runInContext('pixels.length',sandbox),3);
+ assert.throws(()=>vm.runInContext("axisBounds({x_start:'1',x_end:''},'x',[0,1])",sandbox));
+ console.log('OUTER PLOT WINDOW TESTS PASSED');
+})().catch(e=>{console.error(e);process.exit(1)});

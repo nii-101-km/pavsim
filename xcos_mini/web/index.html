@@ -12,15 +12,9 @@
   <div class="spacer"></div>
   <select id="language" aria-label="Interface language" data-i18n-title="ui.language"><option value="en">EN</option><option value="ru">RU</option></select>
   <div class="run-controls">
-    <label>t<sub>end</sub> <input data-i18n-title="param.t_end" title="Run duration" id="t_end" type="number" value="1" step="0.1" min="0"></label>
-    <label>h <input data-i18n-title="param.h" title="Step size" id="h" type="number" value="0.01" step="0.001" min="0.0001"></label>
-    <label><span data-i18n="ui.method">Method</span>
-      <select id="method">
-        <option value="rk4">RK4</option>
-        <option value="euler" data-i18n="literal.euler">Euler</option>
-      </select>
-    </label>
+    <span id="ownership_badge" class="hidden" title="Execution mode"></span>
     <button id="run" class="primary" data-i18n="ui.run">▶ Run</button>
+
   </div>
   <div class="io-controls">
     <button id="experiment_settings" class="hidden" data-i18n="ui.experiment_settings">Experiment settings</button>

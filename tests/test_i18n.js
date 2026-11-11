@@ -32,7 +32,7 @@ function makeEditor(storage={},denyStorage=false) {
  }
  const ctx=new Proxy({fillText:s=>drawn.push(String(s))},{get:(o,k)=>k in o?o[k]:()=>{}});
  elements.canvas.getContext=()=>ctx;elements.canvas.parentElement=elements.canvas_wrap;
- ['t_end','h','method'].forEach((id,i)=>elements[id].value=['1','.01','rk4'][i]);
+ ['t_end','h','method'].forEach((id,i)=>{if(elements[id])elements[id].value=['1','.01','rk4'][i];});
  elements.dialog_overlay.classList.add('hidden');
  function query(selector){
   const field=/^\[data-([\w-]+)\]$/.exec(selector);

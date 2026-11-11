@@ -5,10 +5,10 @@ from .optimization import optimize,finite,simulate_with_optimizers
 from .optimization_blocks import Optimizer
 from .workspace_blocks import Experiment,collect_plots
 
-def execute_workspace(model,build_model,t_end=1.,h=.01,method='rk4',selected=None):
+def execute_workspace(model,build_model,t_end=1.,h=.01,method='rk4',selected=None,cancel_check=None):
     experiments=[b for b in model.get('blocks',[]) if b['type']=='experiment']
     if not experiments:
-        result,reports=simulate_with_optimizers(model,build_model,t_end,h,method)
+        result,reports=simulate_with_optimizers(model,build_model,t_end,h,method,cancel_check=cancel_check)
         return result,reports,[]
     world=copy.deepcopy(model);reports=[];completed=[];latest={};trial_runs={}
     probe=copy.deepcopy(world)
@@ -22,7 +22,7 @@ def execute_workspace(model,build_model,t_end=1.,h=.01,method='rk4',selected=Non
         for b in local['blocks']:
             if b['type']=='experiment':b.setdefault('params',{})['_result']=(scores or {}).get(str(b['id']),0.)
         exe=build_model(local)
-        return Engine(exe,0,1).run()
+        return Engine(exe,0,1).run(cancel_check=cancel_check)
     def port_value(results,bid,port):
         value=results[str(bid)][-1][1]
         return value[port] if isinstance(value,tuple) else value
@@ -66,7 +66,7 @@ def execute_workspace(model,build_model,t_end=1.,h=.01,method='rk4',selected=Non
         if seen!=set(range(3)):raise BlockError(eid+': нужны терминалы p1, p2 и p3')
         # Every call constructs a new production Model/Engine: all integrated
         # states, delay histories, accumulated objectives and seeds restart.
-        results,_=simulate_with_optimizers(inside,build_model,end,step,config['method'])
+        results,_=simulate_with_optimizers(inside,build_model,end,step,config['method'],cancel_check=cancel_check)
         source=incoming[0];j=finite(port_value(results,source['from'],int(source.get('from_port',0))),'Итоговая J')
         results[result_id][-1]=(results[result_id][-1][0],j)
         info=dict(block_id=eid,parameters=parameters,result=j,status='completed',t_end=end,h=step,method=config['method'])

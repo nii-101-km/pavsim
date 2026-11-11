@@ -100,3 +100,25 @@ main { flex: 1; display: flex; min-height: 0; }
 
 #dialog_body label:has(#dlg_algorithm_options){flex-direction:column;align-items:stretch;}
 #dlg_algorithm_options{width:100%;}
+
+/* Ownership badge */
+.ownership-standalone {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.ownership-external {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}

@@ -4,6 +4,7 @@ let statusPresentation = null;
 const state = {
   blocks: [], connections: [], blockTypes: {}, libraryTree: null,
   selected: null, placingType: null, pendingConn: null, drag: null,
+  panX: 0, panY: 0, panDrag: null, _panMoved: false,
   bendEditMode: null,
   nextId: 1, lastResults: null, graphWindows: {},
   // Subsystem view system
@@ -29,6 +30,7 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 function canvasPos(ev) { const r = canvas.getBoundingClientRect(); return {x: ev.clientX - r.left, y: ev.clientY - r.top}; }
+function worldPos(ev) { const p = canvasPos(ev); return {x: p.x - state.panX, y: p.y - state.panY}; }
 function setStatus(kind, key, values = {}) {
   statusPresentation = {kind, key, values};
   const el = document.getElementById('statusbar');
@@ -342,10 +344,16 @@ function drawBlock(b) {
   }
 }
 function draw() {
+  updateOwnershipBadge();
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(state.panX, state.panY);
+  // Grid in world coordinates covering visible viewport
+  const vx0 = -state.panX, vy0 = -state.panY;
+  const vx1 = vx0 + canvas.width, vy1 = vy0 + canvas.height;
   ctx.strokeStyle='#eef2f6'; ctx.lineWidth=1;
-  for(let x=0;x<canvas.width;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
-  for(let y=0;y<canvas.height;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+  for(let x=Math.floor(vx0/24)*24; x<=vx1; x+=24){ctx.beginPath();ctx.moveTo(x,vy0);ctx.lineTo(x,vy1);ctx.stroke();}
+  for(let y=Math.floor(vy0/24)*24; y<=vy1; y+=24){ctx.beginPath();ctx.moveTo(vx0,y);ctx.lineTo(vx1,y);ctx.stroke();}
   state.connections.forEach((c,idx)=>{
     const pts=routePoints(c); if(!pts)return;
     const sel=state.selected&&state.selected.kind==='conn'&&state.selected.index===idx;
@@ -354,6 +362,7 @@ function draw() {
   if(state.pendingConn&&state._mouse){const from=blockById(state.pendingConn.from);if(from){const p1=outputPort(from,state.pendingConn.fromPort);drawConnection([p1].concat(defaultRoute(p1,state._mouse)).concat([state._mouse]),false,true);}}
   state.blocks.forEach(b=>drawBlock(b));
   if(state.placingType&&state._mouse){const{W,H}=blockDims(state.placingType);ctx.globalAlpha=0.5;ctx.fillStyle='#cfe3f7';ctx.strokeStyle='#2f6fb3';ctx.lineWidth=1.5;roundRect(ctx,state._mouse.x-W/2,state._mouse.y-H/2,W,H,8);ctx.fill();ctx.stroke();ctx.globalAlpha=1;}
+  ctx.restore();
 }
 
 // ---- hit testing ---------------------------------------------------------
@@ -379,8 +388,8 @@ function updateCanvasTooltip(x, y) {
   const port = portAt(x, y);
   if (port) {
     portTooltipEl.textContent = portTooltip(port);
-    portTooltipEl.style.left = (x + 12) + 'px';
-    portTooltipEl.style.top = (y - 28) + 'px';
+    portTooltipEl.style.left = (x + state.panX + 12) + 'px';
+    portTooltipEl.style.top = (y + state.panY - 28) + 'px';
     portTooltipEl.classList.remove('hidden');
   } else {
     portTooltipEl.classList.add('hidden');
@@ -433,6 +442,15 @@ function toModelDict() {
     connections: serializeConnections(rootConns),
   };
 }
+function toActiveDiagramDict() {
+  // Serialize the ACTIVE diagram (root or nested view) for local execution
+  const blocks = state.blocks;
+  const conns = state.connections;
+  return {
+    blocks: serializeBlocks(blocks),
+    connections: serializeConnections(conns),
+  };
+}
 function deserializeBlocks(arr) {
   return (arr || []).map(b => {
     const o = {
@@ -468,7 +486,7 @@ function fromModelDict(d) {
   state.connections = state.rootConnections;
   state.activeView = null;
   state.selected = null; state.placingType = null; state.pendingConn = null;
-  state.bendEditMode = null; state.drag = null;
+  state.bendEditMode = null; state.drag = null; state.panX = 0; state.panY = 0; state.panDrag = null;
   updateModeButtons();
   updateBackButton();
   let mx = 0;
@@ -505,8 +523,7 @@ function enterSubsystem(subId) {
     }
   }
   if (sub.type==='experiment') {
-    state.outerControls=['t_end','h','method'].map(id=>document.getElementById(id).value);
-    ['t_end','h','method'].forEach(id=>document.getElementById(id).value=sub.params[id] ?? (id==='t_end'?10:id==='h'?.02:'rk4'));
+    // Solver settings are now in the experiment block's params (no toolbar controls)
   }
   state.blocks = sub.internal.blocks;
   state.connections = sub.internal.connections;
@@ -514,7 +531,7 @@ function enterSubsystem(subId) {
   if(parentView)state.activeView=parentView+'/'+subId;
   // Clear stale interaction state
   state.selected = null; state.placingType = null; state.pendingConn = null;
-  state.bendEditMode = null; state.drag = null;
+  state.bendEditMode = null; state.drag = null; state.panX = 0; state.panY = 0; state.panDrag = null;
   updateModeButtons();
   updateBackButton();
   // Set nextId for this view
@@ -528,16 +545,16 @@ function exitSubsystem() {
   if(state.activeView && state.activeView.includes('/')) {
     state.activeView=state.activeView.split('/').slice(0,-1).join('/');
     const parent=containerForView(state.activeView);state.blocks=parent.internal.blocks;state.connections=parent.internal.connections;
-    state.selected=null;state.drag=null;state.pendingConn=null;state.placingType=null;state.bendEditMode=null;
+    state.selected=null;state.drag=null;state.pendingConn=null;state.placingType=null;state.bendEditMode=null;state.panX=0;state.panY=0;state.panDrag=null;
     state.nextId=1+state.blocks.reduce((n,b)=>{const match=/^b(\d+)$/.exec(b.id);return Math.max(n,match?Number(match[1]):0);},0);
     updateModeButtons();updateBackButton();draw();return;
   }
-  if (state.outerControls) {['t_end','h','method'].forEach((id,i)=>document.getElementById(id).value=state.outerControls[i]);state.outerControls=null;}
+  // outerControls no longer needed (no toolbar solver controls)
   state.blocks = state.rootBlocks;
   state.connections = state.rootConnections;
   state.activeView = null;
   state.selected = null; state.placingType = null; state.pendingConn = null;
-  state.bendEditMode = null; state.drag = null;
+  state.bendEditMode = null; state.drag = null; state.panX = 0; state.panY = 0; state.panDrag = null;
   updateModeButtons();
   updateBackButton();
   let mx = 0;
@@ -551,7 +568,7 @@ function updateBackButton() {
   if (btn) btn.classList.toggle('hidden', !state.activeView);
   const current=containerForView(state.activeView);
   const batch=!state.activeView && (state.rootBlocks || state.blocks).some(b=>b.type==='experiment');
-  ['t_end','h','method'].forEach(id=>{const el=document.getElementById(id);if(el.closest)el.closest('label').style.display=batch?'none':'';});
+  // Solver controls removed from toolbar; no hiding needed
   const settings=document.getElementById('experiment_settings');
   if(settings)settings.classList.toggle('hidden',!current || current.type!=='experiment');
 }
@@ -579,8 +596,8 @@ async function loadBlockTypes() {
   // Boundary terminals (not in library, hardcoded dimensions for rendering)
   state.blockTypes['experiment_input']={name:'experiment_input',display_name:'Параметр эксперимента',n_inputs:0,n_outputs:1,parameters:{port:0},output_labels:['p']};
   state.blockTypes['experiment_result']={name:'experiment_result',display_name:'Итоговая оценка',n_inputs:1,n_outputs:0,parameters:{},input_labels:['J']};
-  state.blockTypes['in1_terminal'] = {name:'in1_terminal', display_name:'Вход подсистемы', input_labels:[], output_labels:['In1'], n_inputs:0, n_outputs:1, state_kind:'none', parameters:{}};
-  state.blockTypes['out1_terminal'] = {name:'out1_terminal', display_name:'Выход подсистемы', input_labels:['Out1'], output_labels:[], n_inputs:1, n_outputs:0, state_kind:'none', parameters:{}};
+  state.blockTypes['in1_terminal'] = {name:'in1_terminal', display_name:'Вход подсистемы', input_labels:[], output_labels:['In1'], n_inputs:0, n_outputs:1, state_kind:'none', parameters:{name:'', mapping:''}, parameter_labels:{name:'Port name', mapping:'Maps to (block_id.param)'}};
+  state.blockTypes['out1_terminal'] = {name:'out1_terminal', display_name:'Выход подсистемы', input_labels:['Out1'], output_labels:[], n_inputs:1, n_outputs:0, state_kind:'none', parameters:{name:'', mapping:''}, parameter_labels:{name:'Port name', mapping:'Maps to (block_id)'}};
 }
 async function loadLibrary() {
   const data = await api('/api/library');
@@ -628,18 +645,69 @@ function selectPlacingBlock(name) {
 }
 
 // ---- simulation -----------------------------------------------------------
+
+// Helper: get solver parameter from experiment block or default
+function _getSolverParam(name, defaultVal) {
+  // Resolve the full activeView path to find the correct experiment block
+  const path = (state.activeView || '').split('/').filter(Boolean);
+  if (path.length === 0) return defaultVal;
+  // Walk the path to find the container at the active view level
+  let nodes = state.rootBlocks || state.blocks;
+  let container = null;
+  for (const id of path) {
+    const found = nodes.find(b => String(b.id) === id);
+    if (!found) return defaultVal;
+    container = found;
+    nodes = (found.internal || {}).blocks || [];
+  }
+  // The container IS the experiment block (or a subsystem containing one)
+  if (container && container.type === 'experiment' && container.params && container.params[name] !== undefined) {
+    return container.params[name];
+  }
+  // Also check if the container has solver params directly (per-block settings)
+  if (container && container.params && container.params[name] !== undefined) {
+    return container.params[name];
+  }
+  return defaultVal;
+}
+
+// Update ownership badge display
+function updateOwnershipBadge() {
+  const badge = document.getElementById('ownership_badge');
+  if (!badge) return;
+  // Check the ACTIVE diagram's blocks (not always root)
+  const blocks = state.blocks;
+  const hasIn = blocks.some(b => b.type === 'in1_terminal');
+  const hasOut = blocks.some(b => b.type === 'out1_terminal');
+  if (hasIn || hasOut) {
+    badge.textContent = 'EXTERNALLY CONTROLLED';
+    badge.className = 'ownership-external';
+    badge.title = 'This diagram has declared external ports. Internal execution is prohibited. Use /api/invoke.';
+  } else {
+    badge.textContent = 'STANDALONE';
+    badge.className = 'ownership-standalone';
+    badge.title = 'No external ports declared. This diagram can run internally.';
+  }
+}
+
 async function runSim() {
   if (state.blocks.length === 0) {
     setStatus('error', 'status.empty');
     return;
   }
+  // Ownership check: reject if ACTIVE diagram has external ports
+  const hasExternal = state.blocks.some(b => b.type === 'in1_terminal' || b.type === 'out1_terminal');
+  if (hasExternal) {
+    setStatus('error', 'status.externally_controlled');
+    return;
+  }
   setStatus('info', 'status.running');
   try {
     const body = {
-      model: toModelDict(),
-      t_end: parseFloat(document.getElementById('t_end').value),
-      h: parseFloat(document.getElementById('h').value),
-      method: document.getElementById('method').value,
+      model: toActiveDiagramDict(),
+      t_end: _getSolverParam('t_end', 1.0),
+      h: _getSolverParam('h', 0.01),
+      method: _getSolverParam('method', 'rk4'),
     };
     const active=(state.rootBlocks || []).find(b=>b.id===(state.activeView || '').split('/')[0] && b.type==='experiment');
     if(active)body.experiment=active.id;
@@ -651,7 +719,7 @@ async function runSim() {
       body: JSON.stringify(body),
     });
     const tuning = data.optimization || [];
-    if ((tuning.length || (data.experiments || []).length) && JSON.stringify(toModelDict()) !== fingerprint) {
+    if ((tuning.length || (data.experiments || []).length) && JSON.stringify(toActiveDiagramDict()) !== fingerprint) {
       setStatus('error', 'status.changed'); return;
     }
     tuning.forEach(report=>{
@@ -835,7 +903,7 @@ function applyDialog() {
   });
   const owner=dialogBlock;
   closeDialog();
-  if(owner.type==='experiment' && state.activeView===owner.id) ['t_end','h','method'].forEach(id=>document.getElementById(id).value=owner.params[id]);
+  // Solver params are in the experiment block; no toolbar to sync
   draw();
   setStatus('ok', 'status.updated', {id});
 }
@@ -876,9 +944,18 @@ function deleteConnection(idx) {
 
 // ---- canvas events --------------------------------------------------------
 canvas.addEventListener('mousemove', ev => {
-  const p = canvasPos(ev);
+  const cp = canvasPos(ev);
+  const p = worldPos(ev);
   state._mouse = p;
   updateCanvasTooltip(p.x, p.y);
+  // Handle pan drag
+  if (state.panDrag) {
+    state.panX = state.panDrag.startPanX + (cp.x - state.panDrag.startX);
+    state.panY = state.panDrag.startPanY + (cp.y - state.panDrag.startY);
+    state._panMoved = true;
+    draw();
+    return;
+  }
   const d = state.drag;
   if (d) {
     if (d.kind === 'block') {
@@ -903,7 +980,8 @@ canvas.addEventListener('mousemove', ev => {
 canvas.addEventListener('mouseleave', () => { portTooltipEl.classList.add('hidden'); });
 canvas.addEventListener('mousedown', ev => {
   if (ev.button !== 0) return;
-  const p = canvasPos(ev);
+  const cp = canvasPos(ev);
+  const p = worldPos(ev);
   if (state.bendEditMode === 'edit_bends') {
     for (let idx = 0; idx < state.connections.length; idx++) {
       const hit = hitRoute(state.connections[idx], p.x, p.y, 8);
@@ -957,11 +1035,19 @@ canvas.addEventListener('mousedown', ev => {
   const b = blockAt(p.x, p.y);
   if (b) {
     state.drag = {kind: 'block', block: b, dx: p.x - b.x, dy: p.y - b.y};
+    return;
   }
+  // Empty canvas: start pan
+  state.panDrag = {startX: cp.x, startY: cp.y, startPanX: state.panX, startPanY: state.panY};
+  state._panMoved = false;
 });
 canvas.addEventListener('mouseup', ev => {
   if (ev.button !== 0) return;
-  const p = canvasPos(ev);
+  const p = worldPos(ev);
+  if (state.panDrag) {
+    state.panDrag = null;
+    return;
+  }
   if (state.pendingConn) {
     const port = portAt(p.x, p.y);
     if (port && port.kind === 'in' && port.block.id !== state.pendingConn.from) {
@@ -990,8 +1076,18 @@ canvas.addEventListener('mouseup', ev => {
   }
   state.drag = null;
 });
+// Window-level mouseup to stop pan even if released outside canvas
+window.addEventListener('mouseup', ev => {
+  if (ev.button !== 0) return;
+  if (state.panDrag) {
+    state.panDrag = null;
+    state._panMoved = false;
+    draw();
+  }
+});
 canvas.addEventListener('click', ev => {
-  const p = canvasPos(ev);
+  const p = worldPos(ev);
+  if (state._panMoved) { state._panMoved = false; return; }
   if (state.bendEditMode) return;
   if (state.placingType) {
     // Prevent placing subsystem inside a subsystem (one-level restriction)
@@ -1034,7 +1130,7 @@ canvas.addEventListener('click', ev => {
   draw();
 });
 canvas.addEventListener('dblclick', ev => {
-  const p = canvasPos(ev);
+  const p = worldPos(ev);
   const b = blockAt(p.x, p.y);
   if (!b) return;
   if (['subsystem','experiment'].includes(b.type)) {
@@ -1050,7 +1146,7 @@ canvas.addEventListener('dblclick', ev => {
 });
 canvas.addEventListener('contextmenu', ev => {
   ev.preventDefault();
-  const p = canvasPos(ev);
+  const p = worldPos(ev);
   const b = blockAt(p.x, p.y);
   if (b) { deleteBlock(b.id); return; }
   const ci = connectionAt(p.x, p.y);
@@ -1108,7 +1204,7 @@ document.getElementById('clear').addEventListener('click', () => {
   if (!confirm(t('status.clear_confirm'))) return;
   state.blocks = state.rootBlocks = [];
   state.connections = state.rootConnections = [];
-  state.activeView = null; state.selected = null; state.lastResults = null;
+  state.activeView = null; state.selected = null; state.lastResults = null; state.panX = 0; state.panY = 0; state.panDrag = null;
   updateBackButton();
   for (const bid of Object.keys(state.graphWindows)) {
     const win = state.graphWindows[bid];
@@ -1145,10 +1241,9 @@ document.getElementById('dialog_overlay').addEventListener('click', ev => {
   draw();
 })();
 
-['t_end','h','method'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
- const owner=(state.rootBlocks || []).find(b=>b.id===(state.activeView || '').split('/')[0] && b.type==='experiment');
- if(owner)owner.params[id]=id==='method'?document.getElementById(id).value:Number(document.getElementById(id).value);
-}));
+// Solver settings are managed via the experiment block's Parameters dialog.
+// The hidden toolbar elements have been removed; _getSolverParam() reads
+// from the experiment block with sensible defaults.
 document.getElementById('experiment_settings').addEventListener('click',()=>{
  const owner=(state.rootBlocks || []).find(b=>b.id===(state.activeView || '').split('/')[0] && b.type==='experiment');
  if(owner)openDialog(owner);
@@ -1171,7 +1266,7 @@ function renderRunSummary(data) {
   let text=experiments.length ? experiments.map(e=>e.block_id+': J='+e.result.toPrecision(5)+'; t_end='+e.t_end+', h='+e.h+', '+e.method.toUpperCase()).join('\n') :
     t('status.finished',{steps:data.n_steps,signals:Object.keys(state.lastResults).length});
   text+=(nGraph ? t('status.plot_hint') : '')+tuning.map(r=>'\n'+r.block_id+': '+Object.entries(r.values).map(([k,v])=>k+'='+v.toPrecision(5)).join(', ')+
-    t('status.evaluations',{n:r.evaluations})+(r.experiment_id ? t('status.score',{score:r.score.toPrecision(5)}) : t(r.converged?'status.converged':'status.not_converged'))).join('');
+    t('status.evaluations',{n:r.evaluations})+(r.experiment_id ? t('status.score',{score:r.score.toPrecision(5)}) : (r.converged===true?t('status.converged'):r.converged===false?t('status.not_converged'):t('status.unknown')))).join('');
   setStatus('ok',text);
   statusPresentation={run:data};
   const links=document.createElement('div');

@@ -139,9 +139,12 @@ class TestSyncFix(unittest.TestCase):
             self._assert_runs_to_one(self.scenarios["s4_wire_replace_navigate"][key], expect_ids=["b2"])
 
     def test_s5_two_subsystems_full_root_runs_to_one(self):
-        """Edit one of two subsystems; Run/Save from inside still serializes full root; runs to 1.0."""
-        for key in ("run", "save"):
-            self._assert_runs_to_one(self.scenarios["s5_two_subsystems"][key], expect_ids=["gd", "gd2"])
+        """Edit one of two subsystems; Run is blocked (active diagram has ports); Save serializes full root; runs to 1.0."""
+        # Run is blocked when inside a diagram with external ports
+        self.assertFalse(self.scenarios["s5_two_subsystems"].get("runnable", True),
+                         "S5: Run must be blocked when active diagram has external ports")
+        # Save still serializes the full root and runs to 1.0
+        self._assert_runs_to_one(self.scenarios["s5_two_subsystems"]["save"], expect_ids=["gd", "gd2"])
 
     def test_s6_clear_inside_sub_runs_to_one(self):
         """Clear inside a subsystem -> new parent diagram: Run AND Save payloads run to 1.0."""

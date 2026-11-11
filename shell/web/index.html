@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="app.title">PavSim — dynamic system simulation</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="toolbar">
+  <div class="brand">PavSim</div>
+  <div class="spacer"></div>
+  <select id="language" aria-label="Interface language" data-i18n-title="ui.language"><option value="en">EN</option><option value="ru">RU</option></select>
+  <div class="run-controls">
+    <span id="ownership_badge" class="hidden" title="Execution mode"></span>
+    <button id="run" class="primary" data-i18n="ui.run">▶ Run</button>
+    <button id="stop_session" data-i18n="ui.stop_session">■ Stop</button>
+
+  </div>
+  <div class="io-controls">
+    <button id="back_to_parent" class="primary hidden" title="Return to parent diagram" data-i18n-title="ui.back_hint" data-i18n="ui.back">← Back to parent</button>
+    <input id="model_name" type="text" placeholder="Model name" data-i18n-placeholder="ui.model_name" value="my_model">
+    <button id="save" data-i18n="ui.save">Save</button>
+    <select id="load_list"></select>
+    <button id="load" data-i18n="ui.load">Load</button>
+    <button id="block_params" title="Selected block settings (F2)" data-i18n-title="ui.parameters_hint" data-i18n="ui.parameters">Parameters</button>
+    <button id="clear" title="Clear the diagram" data-i18n-title="ui.clear_hint" data-i18n="ui.clear">Clear</button>
+    <button id="edit_bends" title="Toggle add bend mode" data-i18n-title="ui.add_bend_hint" data-i18n="ui.add_bend">Add Bend</button>
+    <button id="reset_route" title="Toggle reset route mode" data-i18n-title="ui.reset_route_hint" data-i18n="ui.reset_route">Reset Route</button>
+  </div>
+</header>
+
+<main>
+  <aside id="library_panel">
+    <div class="library_header">
+      <span class="library_title" data-i18n="ui.library">Block library</span>
+      <button id="library_refresh" title="Re-read the block files from disk" data-i18n-title="ui.refresh_hint" data-i18n="ui.refresh">⟳ Refresh</button>
+    </div>
+    <div id="library_tree"></div>
+    <div class="library_hint" data-i18n="ui.library_hint">Click a block, then click the canvas to place it. Double-click a graph block to open its plot in a new window.</div>
+  </aside>
+  <section id="canvas_wrap">
+    <canvas id="canvas"></canvas>
+    <div id="port_tooltip" class="hidden"></div>
+    <div id="hint" data-i18n="ui.canvas_hint">Select a library block and click the canvas to place it. Drag blocks to move. Drag from an output port to an input port to connect. Double-click to edit parameters or open a plot. Right-click or Delete to remove.</div>
+  </section>
+</main>
+
+<footer id="statusbar" data-i18n="ui.not_run">Not run yet.</footer>
+
+<div id="dialog_overlay" class="hidden">
+  <div id="dialog">
+    <h3 id="dialog_title" data-i18n="ui.parameters">Parameters</h3>
+    <div id="dialog_body"></div>
+    <div class="dialog_btns">
+      <button id="dialog_cancel" data-i18n="ui.cancel">Cancel</button>
+      <button id="dialog_ok" class="primary" data-i18n="ui.ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n-catalog.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

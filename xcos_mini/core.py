@@ -84,6 +84,14 @@ class Block:
         self.params = dict(self.parameters)
         self.state = self.initial_state(self.params)
 
+    def request_stop(self):
+        """Cooperatively stop work owned by this trial's block instance."""
+        pass
+
+    def close_trial(self):
+        """Release resources owned by this block after the current trial."""
+        pass
+
     # -- state ------------------------------------------------------------- #
     def state_size(self, params):
         return 0
@@ -421,7 +429,7 @@ class Engine:
             for i in range(n)
         ]
 
-    def run(self):
+    def run(self, cancel_check=None):
         """Run the simulation. Returns a dict block_id -> list of (t, value)."""
         model = self.model
         ratio = self.t_end / self.h
@@ -435,6 +443,8 @@ class Engine:
         results = {bid: [] for bid in model.blocks}
         previous_t = 0.0
         for step in range(n_steps + 1):
+            if cancel_check is not None:
+                cancel_check()
             t = self.t_end if step == n_steps else step * self.h
             if step > 0 and self.integrated:
                 self.state = self._integrate(previous_t, self.state, t - previous_t)

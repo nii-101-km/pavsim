@@ -207,7 +207,7 @@ def optimize(model, build_model, settings, binding=None):
     def evaluate(values, baseline=False):
         nonlocal count, failures, last_error, best
         key = tuple(values)
-        if key in cache:
+        if (binding is None or binding.get('cache', True)) and key in cache:
             return cache[key]
         if count >= budget:
             return None
@@ -410,7 +410,7 @@ def optimize(model, build_model, settings, binding=None):
     }
 
 
-def simulate_with_optimizers(model, build_model, t_end, h, method):
+def simulate_with_optimizers(model, build_model, t_end, h, method, cancel_check=None):
     """Run orchestration: tune connected generic blocks, then simulate once.
 
     Candidate Engine runs only read parameter outputs and cannot start tuning.
@@ -456,7 +456,7 @@ def simulate_with_optimizers(model, build_model, t_end, h, method):
                             failed_evaluations=report['failed_evaluations'],converged=report['converged']))
         flat=expand_subsystems(prepared)
     executable=build_model(prepared)
-    results=Engine(executable,t_end,h,method).run()
+    results=Engine(executable,t_end,h,method).run(cancel_check=cancel_check)
     # The final objective output is the whole-run score, consistently including
     # the finite-horizon feasibility rule used by the search.
     for bid,b in executable.blocks.items():

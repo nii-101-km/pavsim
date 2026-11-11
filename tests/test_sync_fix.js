@@ -119,7 +119,7 @@ function connect(fromId, toId, fromPort, toPort) {
 }
 async function captureRun() {
   simulateBodies.length = 0;
-  getElementById('t_end').value = '1'; getElementById('h').value = '0.01'; getElementById('method').value = 'rk4';
+  if(getElementById('t_end'))getElementById('t_end').value='1'; if(getElementById('h'))getElementById('h').value='0.01'; if(getElementById('method'))getElementById('method').value='rk4';
   await sandbox.runSim();
   assert.strictEqual(simulateBodies.length, 1, 'runSim must send one /api/simulate request');
   return simulateBodies[0].model;
@@ -315,10 +315,14 @@ function gdBlocks(model) { return model.blocks.filter(b => b.type === 'graph_dis
     sandbox.deleteConnection(oldIdx);
     connect('in1', g.id, 0, 0);
     connect(g.id, 'out1', 0, 0);
-    // While inside sub1, Run/Save must still serialize the FULL root.
-    const run = await captureRun();
+    // While inside sub1 (which has in1/out1 terminals), Run is BLOCKED by ownership.
+    // Save still serializes the FULL root.
+    simulateBodies.length = 0;
+    await sandbox.runSim();
+    assert.strictEqual(simulateBodies.length, 0, 'S5: Run must be blocked when active diagram has external ports');
     const save = await captureSave('s5_disposable');
-    for (const m of [run, save]) {
+    {
+      const m = save;
       const ids = blockIds(m);
       for (const req of ['c1', 'sub1', 'sub2', 'gd', 'gd2']) assert.ok(ids.includes(req), 'S5: root block ' + req + ' present in full-root serialization');
       const s1 = m.blocks.find(b => b.id === 'sub1');
@@ -335,7 +339,7 @@ function gdBlocks(model) { return model.blocks.filter(b => b.type === 'graph_dis
     sandbox.exitSubsystem();
     assert.strictEqual(state.activeView, null, 'S5: back at root');
     assert.strictEqual(state.blocks.length, 5, 'S5: root still has 5 blocks');
-    out.scenarios.s5_two_subsystems = { run, save, runnable: true, expect_1: ['gd', 'gd2'] };
+    out.scenarios.s5_two_subsystems = { save, runnable: false, expect_1: ['gd', 'gd2'] };
   }
 
   // ---- S6: Clear inside a Subsystem -> place a new parent diagram ----
